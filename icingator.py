@@ -1,5 +1,5 @@
 #!/usr/bin/python3.4
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 from snimpy.manager import Manager as M
 from snimpy.manager import load
@@ -24,8 +24,8 @@ p_oids = re.compile(r'vars\.oids\[".+?"\].*?=.*?"(\d+)"')
 cisco_mib_path = config['SNMP_CISCO']['mib_path']
 forti_mib_path = config['SNMP_FORTINET']['mib_path']
 
-load("{}/IF-MIB.my".format(cisco_mib_path))
-load("{}/SNMPv2-MIB.my".format(cisco_mib_path))
+load("{}".format(cisco_mib_path))
+#load("{}/SNMPv2-MIB.my".format(cisco_mib_path))
 
 def get_interfaces(host, device_type):
     section = 'SNMP_' + device_type
