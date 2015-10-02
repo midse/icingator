@@ -49,10 +49,11 @@ def get_sysname(host, device_type):
           privprotocol=config[section]["privprotocol"], privpassword=config[section]["privpassword"])
 
     sysname = ''
+
     try:
         sysname = m.sysName.split('.')[0]
     except AttributeError:
-        sysname = host
+        sysname = host  # Fallback to host if sysName attribute doesn't exist (Linux for example)
 
     return sysname
 
@@ -85,7 +86,7 @@ def get_full_conf_path(filename):
     if not filename.endswith('.conf'):
         suffix = '.conf'
 
-    return '{}/conf.d/{}{}{}'.format(config['ICINGA']['conf_folder'], prefix, filename, suffix)
+    return config['ICINGA']['conf_folder'] + '/' + prefix + filename + suffix
 
 
 def parse_conf_file(filename):
@@ -225,6 +226,7 @@ def do_icinga():
 
         output = template('icinga_host', sysname=sysname, device_type=device_type, interfaces=interfaces, host=host, location=location, dateandtime=time.strftime("%c"))
 
+        print(get_full_conf_path('hst-' + device_type))
         with open(get_full_conf_path('hst-' + device_type), "a+") as conf_file:
                 conf_file.write(output)
 
@@ -234,7 +236,7 @@ def do_icinga():
 
             (_, err) = p.communicate()
 
-            disclaimer = "Something went wrong... We weren't able to reload Icinga. Check with your administrator"
+            disclaimer = "Something went wrong... We weren't able to reload Icinga. Check with your administrator."
             if not err:
                 disclaimer = "Icinga was successfully reloaded!"
 
