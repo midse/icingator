@@ -19,7 +19,7 @@ p_sysname = re.compile(r'object Host "(.*?)" {')
 p_address = re.compile(r'address.*?=.*?"(.*?)"')
 p_display_name = re.compile(r'display_name.*?=.*?"(.*?)"')
 p_os = re.compile(r'vars\.os.*?=.*?"(.*?)"')
-p_oids = re.compile(r'vars\.oids\[".+?"\].*?=.*?"(\d+)"')
+p_oids = re.compile(r'vars\.interfaces\[".+?"\].*?=.*?"(\d+)"')
 
 cisco_mib_path = config['SNMP_CISCO']['mib_path']
 forti_mib_path = config['SNMP_LINUX']['mib_path']
@@ -59,7 +59,7 @@ def get_sysname(host, device_type):
 
 
 def get_existing_files():
-    return glob.glob(config['ICINGA']['conf_folder'] + '/conf.d/icingator_hst-*.conf')
+    return glob.glob(config['ICINGA']['conf_folder'] + '/icingator_hst-*.conf')
 
 
 def get_all_existing_sysnames():
@@ -68,6 +68,7 @@ def get_all_existing_sysnames():
     for conf_file in get_existing_files():
         with open(conf_file, 'r') as data:
             data = data.read()
+            print(re.findall(p_display_name, data))
             existing_devices.extend(re.findall(p_display_name, data))
 
     return existing_devices
@@ -187,6 +188,7 @@ def do_conf():
         conf = {}
 
         for conf_file in get_existing_files():
+            print(conf_file)
             devices = parse_conf_file(conf_file)
 
             for device in devices:
@@ -226,9 +228,14 @@ def do_icinga():
 
         output = template('icinga_host', sysname=sysname, device_type=device_type, interfaces=interfaces, host=host, location=location, dateandtime=time.strftime("%c"))
 
-        print(get_full_conf_path('hst-' + device_type))
-        with open(get_full_conf_path('hst-' + device_type), "a+") as conf_file:
-                conf_file.write(output)
+        p_block_defined = re.compile(r'// <ICINGATOR_BEGIN>.*?object Host.*?"{}".*?</ICINGATOR_END>'.format(host), re.DOTALL)
+        with open(get_full_conf_path('hst-' + device_type), "r+") as conf_file:
+                data = conf_file.read()
+                data_modified = re.sub(p_block_defined, '', data)
+                data_modified += output
+                conf_file.seek(0)
+                conf_file.truncate()
+                conf_file.write(data_modified)
 
         disclaimer = "We didn't reload Icinga because 'reload_after_generate' option is disabled!"
         if config.getboolean("ICINGA", "reload_after_generate"):
