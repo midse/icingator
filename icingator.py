@@ -4,7 +4,7 @@
 from snimpy.manager import Manager as M
 from snimpy.manager import load
 from snimpy.snmp import SNMPException
-from bottle import route, run, template, request, SimpleTemplate, static_file
+from bottle import route, run, template, request, static_file
 
 from collections import OrderedDict
 import subprocess
@@ -25,7 +25,7 @@ cisco_mib_path = config['SNMP_CISCO']['mib_path']
 forti_mib_path = config['SNMP_FORTINET']['mib_path']
 
 load("{}".format(cisco_mib_path))
-#load("{}/SNMPv2-MIB.my".format(cisco_mib_path))
+
 
 def get_interfaces(host, device_type):
     section = 'SNMP_' + device_type
@@ -40,6 +40,7 @@ def get_interfaces(host, device_type):
 
     return interfaces
 
+
 def get_sysname(host, device_type):
     section = 'SNMP_' + device_type
 
@@ -49,8 +50,10 @@ def get_sysname(host, device_type):
 
     return m.sysName.split('.')[0]
 
+
 def get_existing_files():
-    return glob.glob(config['ICINGA']['conf_folder']+'/conf.d/icingator_hst-*.conf')
+    return glob.glob(config['ICINGA']['conf_folder'] + '/conf.d/icingator_hst-*.conf')
+
 
 def get_all_existing_sysnames():
     existing_devices = []
@@ -61,6 +64,7 @@ def get_all_existing_sysnames():
             existing_devices.extend(re.findall(p_display_name, data))
 
     return existing_devices
+
 
 def get_full_conf_path(filename):
     prefix = ''
@@ -81,7 +85,7 @@ def get_full_conf_path(filename):
 def parse_conf_file(filename):
     devices = []
 
-    with open(get_full_conf_path(filename),'r') as opened_conf_file:
+    with open(get_full_conf_path(filename), 'r') as opened_conf_file:
         data = opened_conf_file.read()
         all_blocks = re.findall(p_block, data)
 
@@ -99,34 +103,37 @@ def parse_conf_file(filename):
 
     return devices
 
-def get_location(sysname):
-    location = ''
 
+def get_location(sysname):
     # LOCATIONS are defined in config.py file
-    if sysname[:2] in LOCATIONS: # Check the first 2 chars
+    if sysname[:2] in LOCATIONS:  # Check the first 2 chars
         return LOCATIONS[sysname[:2]]
-    elif sysname[len(sysname)-2:] in LOCATIONS: # Check the last 2 chars
-        return LOCATIONS[sysname[len(sysname)-2:]]
+    elif sysname[len(sysname) - 2:] in LOCATIONS:  # Check the last 2 chars
+        return LOCATIONS[sysname[len(sysname) - 2:]]
     else:
         split = sysname.split('-')
 
-        reduced_name = split[len(split)-2][len(split[len(split)-2])-2:] # Check this kind of hostname --> XXXDA-1 (where DA is the location)
+        reduced_name = split[len(split) - 2][len(split[len(split) - 2]) - 2:]  # Check this kind of hostname --> XXXDA-1 (where DA is the location)
         if reduced_name in LOCATIONS:
             return LOCATIONS[reduced_name]
 
     return 'UNKNOWN'
 
+
 @route('/<filename:re:.*\.css>', method="GET")
 def stylesheets(filename):
     return static_file(filename, root='static/css/')
 
+
 @route('/<filename:re:.*\.js>', method="GET")
-def stylesheets(filename):
+def javascript(filename):
     return static_file(filename, root='static/js/')
+
 
 @route('/<filename:re:.*\.(jpg|png|gif|ico)>', method="GET")
 def images(filename):
     return static_file(filename, root='static/img/')
+
 
 @route('/')
 def index():
@@ -135,6 +142,7 @@ def index():
 
     # Template file --> views/index.tpl
     return template('index', device_types=device_types, conf_files=existing_devices)
+
 
 @route('/device', method='POST')
 def do_device():
@@ -149,19 +157,21 @@ def do_device():
 
         oids = []
 
-        conf_file = get_full_conf_path('hst-'+device_type)
+        conf_file = get_full_conf_path('hst-' + device_type)
         # If device already has a conf file, we parse it to load monitored interfaces
         if conf_file in get_existing_files():
             oids = parse_conf_file(conf_file)[0]['oids']
             print(parse_conf_file(conf_file))
 
         # Template file --> views/my_device.tpl
-        return template('my_device', nb_interfaces=len(interfaces),
-                                     host=host,
-                                     sysname=sysname,
-                                     device_type=device_type,
-                                     interfaces=sorted(interfaces.items(), key=lambda tuple: tuple[1][0]),
-                                     oids=oids)
+        return template('my_device',
+                        nb_interfaces=len(interfaces),
+                        host=host,
+                        sysname=sysname,
+                        device_type=device_type,
+                        interfaces=sorted(interfaces.items(), key=lambda tuple: tuple[1][0]),
+                        oids=oids)
+
 
 @route('/conf', method='POST')
 def do_conf():
@@ -185,12 +195,14 @@ def do_conf():
             return template('<br><br><br><br><span class="pure-button button-error">We got an SNMP error : {{error}}</span>', error=error)
 
         # Template file --> views/my_device.tpl
-        return template('my_device', nb_interfaces=len(interfaces),
-                                     host=conf['host'],
-                                     sysname=conf['sysname'],
-                                     device_type=conf['device_type'],
-                                     interfaces=sorted(interfaces.items(), key=lambda tuple: tuple[1][0]),
-                                     oids=conf['oids'])
+        return template('my_device',
+                        nb_interfaces=len(interfaces),
+                        host=conf['host'],
+                        sysname=conf['sysname'],
+                        device_type=conf['device_type'],
+                        interfaces=sorted(interfaces.items(), key=lambda tuple: tuple[1][0]),
+                        oids=conf['oids'])
+
 
 @route('/icinga', method='POST')
 def do_icinga():
@@ -207,7 +219,7 @@ def do_icinga():
 
         output = template('icinga_host', sysname=sysname, device_type=device_type, interfaces=interfaces, host=host, location=location, dateandtime=time.strftime("%c"))
 
-        with open(get_full_conf_path('hst-'+device_type), "a+") as conf_file:
+        with open(get_full_conf_path('hst-' + device_type), "a+") as conf_file:
                 conf_file.write(output)
 
         disclaimer = "We didn't reload Icinga because 'reload_after_generate' option is disabled!"
@@ -221,7 +233,6 @@ def do_icinga():
                 disclaimer = "Icinga was successfully reloaded!"
 
             p.wait()
-
 
         return template('<br><br><strong>{{disclaimer}}</strong><br><br><textarea cols="80" rows="20">{{output}}</textarea><br><br>', output=output, disclaimer=disclaimer)
 
