@@ -22,7 +22,7 @@ p_os = re.compile(r'vars\.os.*?=.*?"(.*?)"')
 p_oids = re.compile(r'vars\.oids\[".+?"\].*?=.*?"(\d+)"')
 
 cisco_mib_path = config['SNMP_CISCO']['mib_path']
-forti_mib_path = config['SNMP_FORTINET']['mib_path']
+forti_mib_path = config['SNMP_LINUX']['mib_path']
 
 load("{}".format(cisco_mib_path))
 
@@ -48,7 +48,13 @@ def get_sysname(host, device_type):
           authprotocol=config[section]["authprotocol"], authpassword=config[section]["authpassword"],
           privprotocol=config[section]["privprotocol"], privpassword=config[section]["privpassword"])
 
-    return m.sysName.split('.')[0]
+    sysname = ''
+    try:
+        sysname = m.sysName.split('.')[0]
+    except AttributeError:
+        sysname = host
+
+    return sysname
 
 
 def get_existing_files():
