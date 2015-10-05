@@ -1,7 +1,13 @@
 import configparser
+import sys
 
 config = configparser.SafeConfigParser()
-config.read('icingator.conf')
+
+try:
+    config.read_file('icingator.conf')
+except configparser.MissingSectionHeaderError:
+    print("Error: 'icingator.conf' is empty or doesn't exist", file=sys.stderr)
+    exit(1)
 
 LOCATIONS = {'PA': 'PARIS', 'TO': 'TOKYO', 'SF': 'SAN FRANCISCO'}
 
