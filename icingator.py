@@ -11,6 +11,7 @@ import subprocess
 import glob
 import re
 import time
+import os.path
 
 from config import config, IF_TYPE_VALUES, LOCATIONS
 
@@ -229,18 +230,26 @@ def do_icinga():
         output = template('icinga_host', sysname=sysname, device_type=device_type, interfaces=interfaces, host=host, location=location, dateandtime=time.strftime("%c"))
         p_block_to_modify = re.compile(r'// <ICINGATOR_BEGIN>.*?object Host.*?"{}".*?</ICINGATOR_END>'.format(host), re.DOTALL)
         p_block_defined = re.compile(r'(// <ICINGATOR_BEGIN>.*?object Host.*?</ICINGATOR_END>)', re.DOTALL)
-        with open(get_full_conf_path('hst-' + device_type), "r") as conf_file:
-                data = conf_file.read()
-                all_blocks = re.findall(p_block_defined, data)
 
-                data_modified = ''
-                for cur_block in all_blocks:
-                    if re.search(p_block_to_modify, cur_block) is not None:
-                        data_modified += output
-                    else:
-                        data_modified += cur_block
+        conf_path = get_full_conf_path('hst-' + device_type)
 
-        with open(get_full_conf_path('hst-' + device_type), "w") as conf_file:
+        data_modified = output
+        
+        if os.path.isfile(conf_path):
+            data_modified = ''
+
+            with open(conf_path, "r") as conf_file:
+                    data = conf_file.read()
+                    all_blocks = re.findall(p_block_defined, data)
+
+                    data_modified = ''
+                    for cur_block in all_blocks:
+                        if re.search(p_block_to_modify, cur_block) is not None:
+                            data_modified += output
+                        else:
+                            data_modified += cur_block
+
+        with open(conf_path, "w") as conf_file:
                 conf_file.write(data_modified)
 
         disclaimer = "We didn't reload Icinga because 'reload_after_generate' option is disabled!"
