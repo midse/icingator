@@ -21,18 +21,21 @@ p_display_name = re.compile(r'display_name.*?=.*?"(.*?)"')
 p_os = re.compile(r'vars\.os.*?=.*?"(.*?)"')
 p_oids = re.compile(r'vars\.interfaces\[".+?"\].*?=.*?"(\d+)"')
 
+# TODO: add dynamic loading from conf file
 cisco_mib_path = config['SNMP_CISCO']['mib_path']
-forti_mib_path = config['SNMP_LINUX']['mib_path']
-
 load("{}".format(cisco_mib_path))
 
-
-def get_interfaces(host, device_type):
+def get_snmp_manager(host, device_type):
     section = 'SNMP_' + device_type
 
     m = M(version=3, host=host, secname=config[section]['secname'],
           authprotocol=config[section]["authprotocol"], authpassword=config[section]["authpassword"],
           privprotocol=config[section]["privprotocol"], privpassword=config[section]["privpassword"])
+
+    return m
+
+def get_interfaces(host, device_type):
+    m = get_snmp_manager(host, device_type)
 
     interfaces = OrderedDict()
     for id in m.ifName:
@@ -42,11 +45,7 @@ def get_interfaces(host, device_type):
 
 
 def get_sysname(host, device_type):
-    section = 'SNMP_' + device_type
-
-    m = M(version=3, host=host, secname=config[section]["secname"],
-          authprotocol=config[section]["authprotocol"], authpassword=config[section]["authpassword"],
-          privprotocol=config[section]["privprotocol"], privpassword=config[section]["privpassword"])
+    m = get_snmp_manager(host, device_type)
 
     sysname = ''
 
@@ -166,6 +165,7 @@ def do_device():
         oids = []
 
         conf_file = get_full_conf_path('hst-' + device_type)
+
         # If device already has a conf file, we parse it to load monitored interfaces
         if conf_file in get_existing_files():
             oids = parse_conf_file(conf_file)[0]['oids']
